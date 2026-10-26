@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <a name="readme-top"></a>
 
 <!-- PROJECT LOGO -->
@@ -227,3 +228,6 @@ python scripts/evaluate_diversity.py
 - **License:** MIT License.
 - **Academic Attribution:** Developed at Shah & Anchor Kutchhi Engineering College (AY 2026–2027) by *Vrinda Garg, Srushti Dedaniya, and Nihaar Kotak*.
 - **Base Architecture Reference:** `george-mountain/full-stack-recommendation-system` (MIT License).
+=======
+# movieRecs---AI-powered-movie-recommendation-system
+>>>>>>> origin/main
