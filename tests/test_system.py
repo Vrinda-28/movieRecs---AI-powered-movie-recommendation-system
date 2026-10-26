@@ -1,7 +1,8 @@
 import time
 from datetime import timedelta
-from httpx import AsyncClient
+
 import pytest
+from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -18,7 +19,9 @@ async def test_st_01_full_user_journey(client: AsyncClient, db_session: AsyncSes
     for i in range(1, 11):
         m = await crud.movie.create(
             db_session,
-            obj_in=MovieCreate(title=f"Journey Movie {i}", genres="Adventure", movie_lens_id=5000 + i),
+            obj_in=MovieCreate(
+                title=f"Journey Movie {i}", genres="Adventure", movie_lens_id=5000 + i
+            ),
         )
         created_movies.append(m)
 
@@ -42,13 +45,19 @@ async def test_st_01_full_user_journey(client: AsyncClient, db_session: AsyncSes
     for i in range(5):
         rate_res = await client.post(
             "/api/v1/ratings/",
-            json={"movie_id": created_movies[i].id, "rating": 4.5, "timestamp": 1000 + i * 100},
+            json={
+                "movie_id": created_movies[i].id,
+                "rating": 4.5,
+                "timestamp": 1000 + i * 100,
+            },
             headers=headers,
         )
         assert rate_res.status_code == 201
 
     # 4. Fetch recommendations
-    rec_res = await client.get("/api/v1/recommendations/user/me?count=5", headers=headers)
+    rec_res = await client.get(
+        "/api/v1/recommendations/user/me?count=5", headers=headers
+    )
     assert rec_res.status_code == 200
     recs = rec_res.json()
     assert len(recs) > 0
@@ -98,16 +107,23 @@ async def test_st_04_session_expiry_handling(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_st_05_recommendation_latency_benchmark(client: AsyncClient, db_session: AsyncSession):
+async def test_st_05_recommendation_latency_benchmark(
+    client: AsyncClient, db_session: AsyncSession
+):
     """ST-05: 10 repeated recommendation requests achieve average response time under 1.0 second."""
     # Seed 5 movies
     for i in range(1, 6):
         await crud.movie.create(
             db_session,
-            obj_in=MovieCreate(title=f"Benchmark Movie {i}", genres="Animation", movie_lens_id=6000 + i),
+            obj_in=MovieCreate(
+                title=f"Benchmark Movie {i}", genres="Animation", movie_lens_id=6000 + i
+            ),
         )
 
-    await client.post("/api/v1/users/register", json={"email": "benchmark@example.com", "password": "pass"})
+    await client.post(
+        "/api/v1/users/register",
+        json={"email": "benchmark@example.com", "password": "pass"},
+    )
     login_res = await client.post(
         "/api/v1/users/login/token",
         data={"username": "benchmark@example.com", "password": "pass"},
@@ -118,26 +134,37 @@ async def test_st_05_recommendation_latency_benchmark(client: AsyncClient, db_se
     latencies = []
     for _ in range(10):
         t0 = time.perf_counter()
-        res = await client.get("/api/v1/recommendations/user/me?count=5", headers=headers)
+        res = await client.get(
+            "/api/v1/recommendations/user/me?count=5", headers=headers
+        )
         t1 = time.perf_counter()
         assert res.status_code == 200
         latencies.append(t1 - t0)
 
     avg_latency = sum(latencies) / len(latencies)
-    assert avg_latency < 1.0, f"Average recommendation latency {avg_latency:.4f}s exceeded 1.0s limit"
+    assert (
+        avg_latency < 1.0
+    ), f"Average recommendation latency {avg_latency:.4f}s exceeded 1.0s limit"
 
 
 @pytest.mark.asyncio
-async def test_st_06_recommendation_filtering_and_consistency(client: AsyncClient, db_session: AsyncSession):
+async def test_st_06_recommendation_filtering_and_consistency(
+    client: AsyncClient, db_session: AsyncSession
+):
     """ST-06: Recommendations respect count parameter and already-watched exclusions."""
     # Seed movies
     for i in range(1, 12):
         await crud.movie.create(
             db_session,
-            obj_in=MovieCreate(title=f"Consistent Movie {i}", genres="Thriller", movie_lens_id=7000 + i),
+            obj_in=MovieCreate(
+                title=f"Consistent Movie {i}", genres="Thriller", movie_lens_id=7000 + i
+            ),
         )
 
-    await client.post("/api/v1/users/register", json={"email": "consistent@example.com", "password": "pass"})
+    await client.post(
+        "/api/v1/users/register",
+        json={"email": "consistent@example.com", "password": "pass"},
+    )
     login_res = await client.post(
         "/api/v1/users/login/token",
         data={"username": "consistent@example.com", "password": "pass"},
@@ -145,10 +172,14 @@ async def test_st_06_recommendation_filtering_and_consistency(client: AsyncClien
     token = login_res.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
-    res_k3 = await client.get("/api/v1/recommendations/user/me?count=3", headers=headers)
+    res_k3 = await client.get(
+        "/api/v1/recommendations/user/me?count=3", headers=headers
+    )
     assert res_k3.status_code == 200
     assert len(res_k3.json()) <= 3
 
-    res_k8 = await client.get("/api/v1/recommendations/user/me?count=8", headers=headers)
+    res_k8 = await client.get(
+        "/api/v1/recommendations/user/me?count=8", headers=headers
+    )
     assert res_k8.status_code == 200
     assert len(res_k8.json()) <= 8

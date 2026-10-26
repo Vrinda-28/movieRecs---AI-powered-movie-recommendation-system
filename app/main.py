@@ -83,4 +83,3 @@ async def health_check(db: AsyncSession = Depends(get_async_db)):
     except Exception as e:
         logger.error(f"Health check failed: DB connection error - {e}")
         raise HTTPException(status_code=503, detail="Database connection error")
-

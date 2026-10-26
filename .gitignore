@@ -42,7 +42,8 @@ yarn-debug.log*
 yarn-error.log*
 
 # Data & Models
-data/
+/data/
+!recommendation-frontend/public/data/
 *.zip
 
 # IDE & OS
@@ -51,3 +52,25 @@ data/
 .vscode/
 *.swp
 *.swo
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Frontend dependencies and build output
+node_modules/
+dist/
+
+# Local development files
+.DS_Store
+.vscode/
+
+# Logs
+*.log

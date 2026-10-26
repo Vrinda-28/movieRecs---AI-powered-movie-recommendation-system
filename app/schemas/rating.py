@@ -6,7 +6,9 @@ from pydantic import BaseModel, Field
 
 class RatingBase(BaseModel):
     movie_id: int
-    rating: float = Field(..., ge=1.0, le=5.0, description="Rating score from 1.0 to 5.0")
+    rating: float = Field(
+        ..., ge=1.0, le=5.0, description="Rating score from 1.0 to 5.0"
+    )
     timestamp: int
 
 
@@ -17,7 +19,6 @@ class RatingCreate(RatingBase):
 class RatingUpdate(BaseModel):
     rating: Optional[float] = Field(None, ge=1.0, le=5.0)
     timestamp: Optional[int] = None
-
 
 
 class RatingInDB(RatingBase):

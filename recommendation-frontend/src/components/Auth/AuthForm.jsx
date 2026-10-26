@@ -1,14 +1,9 @@
 import React, { useState } from "react";
 import { useAppContext } from "../../contexts/AppContext";
-import FilmIcon from "../Icons/FilmIcon";
 
-const APP_NAME = import.meta.env.VITE_APP_NAME || "MovieRecs";
-
-const formInputBase =
-  "bg-[#374151] border border-[#4b5563] text-[#f3f4f6] px-4 py-3 rounded-md w-full transition-colors duration-200";
-const formInputFocus =
-  "focus:outline-none focus:border-[#4f46e5] focus:ring-2 focus:ring-[#4f46e560]";
-
+/**
+ * Editorial AuthForm styled with warm paper and ink tokens.
+ */
 const AuthForm = ({ isLogin, onSubmit }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,24 +29,29 @@ const AuthForm = ({ isLogin, onSubmit }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="bg-gray-800 p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-md">
-        <div className="text-center mb-6 sm:mb-8">
-          <FilmIcon className="w-12 h-12 mx-auto text-indigo-500" />
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mt-3">
-            {APP_NAME}
+    <div className="py-16 sm:py-24 flex items-center justify-center px-4">
+      <div className="bg-white border border-[#D9D3C7] p-8 sm:p-10 shadow-lg w-full max-w-md space-y-6">
+        <div className="text-center space-y-2">
+          <span className="font-['Jost',sans-serif] font-black text-2xl tracking-[0.14em] uppercase text-[#141414]">
+            MOVIERECS
+          </span>
+          <h2 className="font-['Jost',sans-serif] font-bold text-lg uppercase tracking-wider text-[#141414]">
+            {isLogin ? "Member Sign In" : "Create Account"}
           </h2>
-          <p className="text-gray-400 text-sm sm:text-base">
-            {isLogin ? "Welcome back!" : "Create your account"}
+          <p className="text-xs text-[#5E5A52] font-['Jost',sans-serif]">
+            {isLogin
+              ? "Access your personalized sequential recommendations"
+              : "Register to begin tracking ratings and discoveries"}
           </p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-gray-300"
+              className="block font-['Jost',sans-serif] text-xs font-bold uppercase tracking-wider text-[#5E5A52] mb-1.5"
             >
-              Email address
+              Email Address
             </label>
             <input
               id="email"
@@ -61,14 +61,15 @@ const AuthForm = ({ isLogin, onSubmit }) => {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className={`${formInputBase} ${formInputFocus} mt-1`}
-              placeholder="you@example.com"
+              placeholder="user@example.com"
+              className="w-full p-3 bg-white border border-[#D9D3C7] text-sm text-[#141414] placeholder-[#5E5A52]/50 font-['Jost',sans-serif] focus:outline-none focus:border-[#C8412B] focus:ring-1 focus:ring-[#C8412B] transition-colors"
             />
           </div>
+
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-gray-300"
+              className="block font-['Jost',sans-serif] text-xs font-bold uppercase tracking-wider text-[#5E5A52] mb-1.5"
             >
               Password
             </label>
@@ -80,39 +81,37 @@ const AuthForm = ({ isLogin, onSubmit }) => {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={`${formInputBase} ${formInputFocus} mt-1`}
               placeholder="••••••••"
+              className="w-full p-3 bg-white border border-[#D9D3C7] text-sm text-[#141414] placeholder-[#5E5A52]/50 font-['Jost',sans-serif] focus:outline-none focus:border-[#C8412B] focus:ring-1 focus:ring-[#C8412B] transition-colors"
             />
           </div>
-          {error && <p className="text-sm text-red-400 text-center">{error}</p>}
-          <div>
+
+          {error && (
+            <p className="text-xs font-semibold text-[#C8412B] bg-[#FAF7F2] border border-[#C8412B]/40 p-2.5">
+              {error}
+            </p>
+          )}
+
+          <div className="pt-2">
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn btn-primary text-base bg-[#4f46e5] text-white hover:bg-[#4338ca] px-4 py-3 rounded-md font-semibold transition-colors duration-200 flex justify-center items-center" // btn, btn-primary styles
+              className="w-full py-3.5 bg-[#141414] hover:bg-[#C8412B] text-white text-xs font-['Jost',sans-serif] font-bold uppercase tracking-widest transition-colors disabled:opacity-50 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C8412B]"
             >
-              {loading ? (
-                <div className="spinner w-5 h-5 border-2"></div>
-              ) : isLogin ? (
-                "Sign In"
-              ) : (
-                "Register"
-              )}
+              {loading ? "Processing..." : isLogin ? "Sign In" : "Register"}
             </button>
           </div>
         </form>
-        <p className="mt-6 text-center text-sm text-gray-400">
+
+        <p className="text-center text-xs text-[#5E5A52] font-['Jost',sans-serif] pt-2 border-t border-[#D9D3C7]/60">
           {isLogin ? "Don't have an account? " : "Already have an account? "}
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              navigateTo(isLogin ? "register" : "login");
-            }}
-            className="font-medium text-indigo-400 hover:text-indigo-300"
+          <button
+            type="button"
+            onClick={() => navigateTo(isLogin ? "register" : "login")}
+            className="font-bold text-[#C8412B] hover:underline uppercase tracking-wider cursor-pointer ml-1"
           >
-            {isLogin ? "Sign Up" : "Sign In"}
-          </a>
+            {isLogin ? "Register" : "Sign In"}
+          </button>
         </p>
       </div>
     </div>

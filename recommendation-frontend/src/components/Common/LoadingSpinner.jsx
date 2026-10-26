@@ -1,9 +1,14 @@
+import React from "react";
+
 const LoadingSpinner = ({ text = "Loading..." }) => {
   return (
-    <div className="flex flex-col items-center justify-center p-6 md:p-8 text-gray-400">
-      <div className="spinner mb-3 md:mb-4 w-6 h-6 md:w-8 md:h-8"></div>
-      <p className="text-sm md:text-base">{text}</p>
+    <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-[#141414]">
+      <div className="w-8 h-8 rounded-full border-2 border-[#D9D3C7] border-t-[#C8412B] animate-spin mb-3"></div>
+      <p className="font-['Jost',sans-serif] text-xs font-semibold uppercase tracking-widest text-[#5E5A52]">
+        {text}
+      </p>
     </div>
   );
 };
+
 export default LoadingSpinner;

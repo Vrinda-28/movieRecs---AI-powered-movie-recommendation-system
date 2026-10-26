@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test \"src/**/*.test.mjs\"",
+    "media:build": "node scripts/build-movie-media.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",

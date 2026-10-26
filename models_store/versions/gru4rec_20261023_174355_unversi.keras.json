@@ -1,0 +1,50 @@
+{
+  "dataset_name": "MovieLens-1M",
+  "version_id": "20261023_174355_unversi",
+  "version_filename": "gru4rec_20261023_174355_unversi.keras",
+  "raw_users_count": 203,
+  "eligible_users_count": 203,
+  "total_interactions_count": 11793,
+  "movies_vocabulary_count": 3883,
+  "training_examples_count": 9836,
+  "validation_examples_count": 1093,
+  "window_length": 10,
+  "embedding_dim": 32,
+  "gru_units": 32,
+  "epochs_requested": 10,
+  "epochs_actual": 6,
+  "batch_size": 256,
+  "learning_rate": 0.005,
+  "optimizer": "AdamW",
+  "loss_function": "CategoricalCrossentropy",
+  "mask_zero": true,
+  "padding_mode": "right",
+  "validation_strategy": "Random split (10%)",
+  "early_stopping_patience": 3,
+  "seed": 42,
+  "training_duration_seconds": 1.68,
+  "training_timestamp": "2026-10-23T17:43:55.538227+00:00",
+  "git_commit_hash": "unversioned",
+  "model_file_name": "gru4rec_model.keras",
+  "model_file_size_bytes": 3585527,
+  "final_train_loss": 4.0709,
+  "final_val_loss": 5.4225,
+  "loss_history": {
+    "loss": [
+      5.533277988433838,
+      5.376379489898682,
+      5.036903381347656,
+      4.683267116546631,
+      4.365431308746338,
+      4.070921897888184
+    ],
+    "val_loss": [
+      5.439228534698486,
+      5.2897467613220215,
+      5.226338863372803,
+      5.255420684814453,
+      5.331787109375,
+      5.422514915466309
+    ]
+  }
+}

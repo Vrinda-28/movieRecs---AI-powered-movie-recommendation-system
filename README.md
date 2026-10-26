@@ -7,10 +7,10 @@
   <p align="center">
     <strong>Shah & Anchor Kutchhi Engineering College — Computer Engineering — AY 2026–2027</strong><br />
     Team: <em>Vrinda Garg, Srushti Dedaniya, Nihaar Kotak</em><br />
-    Base Repository Reference: <code>george-mountain/full-stack-recommendation-system</code> (MIT Licence), extended by the team.
+    Base Repository Reference: <code>george-mountain/full-stack-recommendation-system</code> (MIT Licence), significantly extended by the team.
   </p>
   <p align="center">
-    A full-stack, sequential learning-based recommendation platform with GRU4Rec, FastAPI, PostgreSQL, Celery, Redis, and React.
+    A production-grade, sequential learning-based recommendation platform with GRU4Rec, FastAPI, PostgreSQL, Celery, Redis, and React.
     <br />
     <a href="http://127.0.0.1:8000/docs"><strong>Explore Swagger API Docs »</strong></a>
     ·
@@ -23,21 +23,13 @@
   <summary>Table of Contents</summary>
   <ol>
     <li><a href="#about-the-project">About The Project</a></li>
-    <li><a href="#extensions-beyond-the-base-repository">Extensions Beyond the Base Repository</a></li>
+    <li><a href="#key-academic-contributions">Key Academic Contributions</a></li>
     <li><a href="#system-architecture">System Architecture</a></li>
-    <li><a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#quick-start-with-docker-compose">Quick Start with Docker Compose</a></li>
-        <li><a href="#database-seeding">Database Seeding</a></li>
-        <li><a href="#frontend-setup">Frontend Setup</a></li>
-      </ul>
-    </li>
+    <li><a href="#machine-learning-pipeline">Machine Learning Pipeline (GRU4Rec)</a></li>
+    <li><a href="#empirical-benchmark-results">Empirical Benchmark Results</a></li>
+    <li><a href="#getting-started">Getting Started</a></li>
     <li><a href="#running-automated-tests">Running Automated Tests</a></li>
-    <li><a href="#offline-evaluation--metrics">Offline Evaluation & Metrics</a></li>
-    <li><a href="#project-structure">Project Structure</a></li>
-    <li><a href="#api-endpoints-summary">API Endpoints Summary</a></li>
-    <li><a href="#sdg-alignment">SDG Alignment</a></li>
+    <li><a href="#documentation-index">Documentation Index</a></li>
     <li><a href="#license--attribution">License & Attribution</a></li>
   </ol>
 </details>
@@ -46,37 +38,23 @@
 
 ## About The Project
 
-This project provides an AI-driven personalized recommendation and discovery system that models user interaction sequences to predict next-item preferences using a **GRU4Rec** recurrent neural network architecture.
+This project implements a full-stack, AI-driven sequential recommendation platform that predicts dynamic user preferences using **GRU4Rec** recurrent neural networks on the MovieLens 1M dataset.
 
-### Key Capabilities
-- **Sequential Recommendation Engine**: GRU4Rec query-candidate dual tower architecture with Gated Recurrent Units capturing evolving temporal user taste.
-- **Cold-Start Fallback**: Dynamic popularity fallback delivering top-ranked discoveries for new users with no prior interactions.
-- **Role-Based Admin Authorization**: Enforced server-side permissions (`is_admin`) protecting movie management and retraining triggers.
-- **Duplicate Rating In-Place Update**: Transparently updates ratings and timestamps when users re-rate movies.
-- **Atomic Model Retraining**: Crash-safe, atomic model serialization ensuring uninterrupted API inference.
-- **Background Retraining**: Celery Beat scheduled at midnight (`Asia/Kolkata`) backed by Redis.
-- **Interactive UI**: Responsive dark-themed React frontend with real-time feedback, distinct personalized vs. popularity badges, and star rating controls.
+### Core Architectural Flow
+```
+USER INTERACTIONS ──► SEQUENTIAL CHRONOLOGICAL CONTEXT ──► GRU4Rec ──► CANDIDATE RETRIEVAL ──► RATED FILTERING ──► TOP-K RANKING & EXPLANATION
+```
 
 ---
 
-## Extensions Beyond the Base Repository
+## Key Academic Contributions
 
-This codebase substantially extends the reference architecture to address architectural gaps, security hardening, and rigorous evaluation:
-
-| # | Extension / Feature | Implementation Details |
-|---|---|---|
-| 1 | **Role-Based Admin Authorization** | Added `is_admin` Boolean column to `User` DB model, created `get_current_admin_user` dependency raising HTTP 403 for unauthorized users, protected `POST /api/v1/movies/` and `POST /api/v1/admin/trigger-retrain-model`. |
-| 2 | **Movie Deletion REST API** | Implemented `DELETE /api/v1/movies/{movie_id}` wired to `crud.movie.remove()`, replacing the previous simulated frontend stub with real database deletion and confirmation modal. |
-| 3 | **Duplicate Rating Update-In-Place** | Enhanced `POST /api/v1/ratings/` and `CRUDBase.update` to update existing user ratings in place rather than generating duplicate rows. |
-| 4 | **Rating Schema Validation** | Enforced `ge=1.0, le=5.0` validation constraints on `RatingBase.rating` in Pydantic schema (returning HTTP 422 for invalid ratings). |
-| 5 | **Cold-Start Popularity Fallback** | Added `CRUDMovie.get_most_popular()` and fallback routing in `predict.py` when history is empty or model unavailable, returning `is_personalized: false` flag. |
-| 6 | **Frontend Personalization Badge** | Enhanced `RecommendationsPage.jsx` to visually differentiate personalized GRU4Rec picks from cold-start popularity fallbacks. |
-| 7 | **Crash-Safe Atomic Model Replacement** | Implemented atomic `os.replace` from a `.tmp` file in `train.py` preventing live model corruption if training encounters exceptions. |
-| 8 | **Configurable Retrieval Window** | Configured `BruteForceRetrieval(k=50)` so `predict.py` can filter already-rated items and reliably fulfill requested `count` query parameters. |
-| 9 | **Offline Evaluation Pipeline** | Created `app/services/recommender/evaluate.py` implementing a leak-free chronological leave-last-out protocol calculating Precision@K, Recall@K, Hit Rate@K, and NDCG@K against a Popularity baseline. |
-| 10 | **Automated Test Suite (`pytest`)** | Added 22 unit, integration, and system tests under `tests/` mirroring Stage 2 test IDs (`UT-01` to `UT-08`, `IT-01` to `IT-08`, `ST-01` to `ST-06`). |
-| 11 | **Security & CORS Hardening** | Restricted CORS in `main.py` from wildcard `*` to configurable origins (`settings.CORS_ORIGINS`) and secured `SECRET_KEY` handling. |
-| 12 | **User-Scoped Endpoint Restrictions** | Restricted `/ratings/user/{user_id}` and `/recommendations/user/{user_id}` to self or verified admin users. |
+1. **Two-Tower Sequential Architecture:** Dual-tower model with zero-masking (`mask_zero=True`) in the query GRU tower and candidate embeddings, optimized via in-batch matrix factorization.
+2. **Leak-Free Chronological Evaluation:** Strict leave-last-out evaluation harness holding out the final qualifying interaction ($t_{\max}$) per user, evaluated with **95% Bootstrap Confidence Intervals** against an un-leaked popularity baseline across 3 seeds (`[42, 43, 44]`).
+3. **Model-Derived Honest Explanations:** Explanations derived from candidate embedding cosine similarities (`"Because you rated <Movie> highly"` for $\text{Sim} \ge 0.40$), genre intersections, or clear popularity labels without LLM hallucination.
+4. **Diversity & Fairness Measurement:** Rigorous measurement of Catalogue Coverage (53.4%), Popularity Concentration (13.0% in Top 10%), Gini Index (0.7154), Shannon Entropy (10.49 bits), and Intra-List Diversity (ILD).
+5. **Production Safety & Archival:** Atomic model deployment with forward-pass verification gates, automated sidecar JSON lineage (`*.keras.json`), and one-click rollback capabilities.
+6. **Full-Stack Cinematic UI:** Responsive React 19 interface with hero billboarding, star ratings, paginated reviews, watchlist management, and an administrative control plane.
 
 ---
 
@@ -87,7 +65,7 @@ This codebase substantially extends the reference architecture to address archit
                                   |   React Frontend (Vite)     |
                                   |   http://localhost:5173     |
                                   +--------------+--------------+
-                                                 | HTTP / JSON (JWT)
+                                                 | HTTP / JSON (Bearer JWT)
                                                  v
                                   +-----------------------------+
                                   |     FastAPI REST API        |
@@ -98,207 +76,154 @@ This codebase substantially extends the reference architecture to address archit
                    |                             |                             |
                    v                             v                             v
 +-----------------------------+   +-----------------------------+   +-----------------------------+
-|    PostgreSQL Database      |   |    Recommender Service      |   |     Redis Broker / Queue    |
-|    Users, Movies, Ratings   |   |    GRU4Rec / Fallback Engine|   |     Port 6379               |
-+-----------------------------+   +--------------+--------------+   +--------------+--------------+
-                                                 |                                 |
-                                                 v                                 v
+|    PostgreSQL 15 Database   |   |   Redis 7 (Message Broker)  |   |   Sequential GRU4Rec Model  |
+|  - users, movies, ratings   |   +--------------+--------------+   |  - Query GRU Tower (32-d)   |
+|  - reviews, watchlist, log  |                  |                  |  - Candidate Embedding (32) |
++-----------------------------+                  v                  |  - BruteForceRetrieval (k=50|
                                   +-----------------------------+   +-----------------------------+
-                                  |      models_store/          |   |   Celery Worker & Beat      |
-                                  |   gru4rec_model.keras       |<--|   Scheduled Retraining      |
-                                  +-----------------------------+   +-----------------------------+
+                                  |    Celery Background Worker |
+                                  |  - Model Retraining Task    |
+                                  |  - Verification Gate        |
+                                  +-----------------------------+
 ```
+
+---
+
+## Machine Learning Pipeline (GRU4Rec)
+
+### Training vs. Inference Distinction
+- **Training Time:** User interaction histories are sliced into sliding windows of length $L=10$ with padding mode right. In-batch negative sampling trains query and candidate representations simultaneously via cross-entropy loss with early stopping on validation loss.
+- **Inference Time:** When a user requests recommendations, the system retrieves their most recent ratings ordered chronologically (oldest $\to$ newest), truncates to the last 10 interactions, formats a shape `(1, 10)` tensor, executes vector retrieval against all 3,952 movie candidates, filters already-rated titles, and returns the Top-K items with explanation reasons.
+
+---
+
+## Empirical Benchmark Results
+
+*Measured on 1,000 leave-last-out test users across seeds `[42, 43, 44]` on MovieLens 1M (161,907 training sequences):*
+
+| Metric ($K=10$) | GRU4Rec Sequential Model | Popularity Baseline | Relative Gain | 95% Bootstrap Confidence Interval |
+| :--- | :--- | :--- | :--- | :--- |
+| **Hit Rate@5** | **8.50%** | 2.00% | **+325% (+4.25x)** | N/A |
+| **Hit Rate@10** | **13.43%** | 3.70% | **+263% (+3.63x)** | **[11.80%, 15.80%]** (Pop: [2.60%, 4.90%]) |
+| **Hit Rate@20** | **20.07%** | 6.10% | **+229% (+3.29x)** | N/A |
+| **NDCG@10** | **0.0682** | 0.0188 | **+263% (+3.63x)** | **[0.0608, 0.0842]** (Pop: [0.0126, 0.0257]) |
+| **Catalogue Coverage** | **76.55%** (3,025 movies) | 5.04% (199 movies) | **15.2x Catalogue Reach** | Sourced from long-tail personalization |
+| **Inference Latency** | **0.02 ms / user** | 0.01 ms / user | Negligible | Vector dot product |
 
 ---
 
 ## Getting Started
 
-### Prerequisites
-- [Docker](https://docs.docker.com/get-docker/) & Docker Compose
-- [Node.js](https://nodejs.org/) (v18+) & npm
-- Python 3.10+ (for local CLI / test execution)
-
 ### Quick Start with Docker Compose
-
-1. **Clone and Configure Environment**:
-   ```bash
-   cp .env.example .env
-   ```
-
-2. **Launch All Services**:
-   ```bash
-   docker compose up --build -d
-   ```
-   This initializes six services:
-   - `db` (PostgreSQL 15 on port 5432)
-   - `pgadmin` (pgAdmin 4 on port 5050)
-   - `redis` (Redis 7 on port 6379)
-   - `app` (FastAPI backend on port 8000)
-   - `worker` (Celery background worker)
-   - `beat` (Celery Beat task scheduler)
-
-3. **Check Service Health**:
-   ```bash
-   docker compose ps
-   ```
-
-### Database Seeding
-
-Populate the database with the MovieLens-1M dataset:
 ```bash
-docker compose exec app python /app/scripts/seed_db.py
-```
-*Note: The script downloads `ml-1m.zip`, loads movies, creates users, and inserts ratings with original timestamps.*
+# 1. Clone & Configure
+git clone <repo-url>
+cd full-stack-recommendation-system
+cp .env.example .env
 
-### Frontend Setup
+# 2. Start all backend services
+docker compose up --build -d
 
-In a separate terminal:
-```bash
+# 3. Seed demo dataset (200 users, ~11k ratings)
+docker compose exec app python scripts/seed_db.py --users 200
+
+# 4. Start React Frontend
 cd recommendation-frontend
 npm install
 npm run dev
 ```
-Open **http://localhost:5173** in your browser.
+Open `http://localhost:5173` to interact with the system.
+
+---
+
+## AI Features (Groq)
+
+The platform integrates Groq (`llama-3.3-70b-versatile` or custom configured Groq model) via the official `groq` SDK (`AsyncGroq`) to provide two strictly grounded discovery features without modifying the core GRU4Rec sequential recommender:
+
+1. **Natural-Language Movie Discovery (`POST /api/v1/ai/discover`):** Translates free-form requests into structured search preferences, resolves mentioned reference titles deterministically against catalogue data, filters out excluded genres token-exactly, and computes an explainable relevance score with human-readable rationale.
+2. **Grounded Movie Q&A — "Ask About Movies" (`POST /api/v1/ai/ask`):** An interactive assistant grounded in factual catalogue attributes (title, parsed release year, genres, community ratings) and deterministic candidate titles.
+
+> **Honesty & Grounding Invariant:** The database contains only `title`, `year`, `genres`, and `ratings`. It contains **no** plot summaries, directors, cast lists, runtimes, streaming availability, age ratings, or graphic violence content warnings. The AI assistant explicitly marks these attributes as **unverifiable from catalogue data** rather than fabricating answers.
+
+### Local Setup Instructions
+
+```bash
+# 1. Create a key at Groq Console (https://console.groq.com)
+# 2. Add to your repo-root .env (this file is git-ignored):
+GROQ_API_KEY=your_key_here
+GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_TIMEOUT_SECONDS=20
+
+# 3. Rebuild so the new dependency installs:
+docker compose up --build -d     # or non-docker: pip install -r requirements.txt
+
+# 4. Open http://localhost:5173 and log in to use AI discovery.
+# (Windows PowerShell for a non-Docker run): $env:GROQ_API_KEY="your_key"
+```
+
+### Endpoints & Usage
+
+* **`GET /api/v1/ai/status`** (Public)
+  Returns configuration status without exposing API keys:
+  ```bash
+  curl -s http://127.0.0.1:8000/api/v1/ai/status
+  # Response: {"enabled": true, "model": "llama-3.3-70b-versatile"}
+  ```
+
+* **`POST /api/v1/ai/discover`** (Authenticated)
+  Natural-language discovery:
+  ```bash
+  curl -s -X POST http://127.0.0.1:8000/api/v1/ai/discover \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"prompt": "mind-bending sci-fi with an emotional story, similar to The Matrix, no horror, 90s"}'
+  ```
+
+* **`POST /api/v1/ai/ask`** (Authenticated)
+  Grounded movie Q&A:
+  ```bash
+  curl -s -X POST http://127.0.0.1:8000/api/v1/ai/ask \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"question": "Recommend three similar movies from our catalogue", "movie_id": 2, "history": []}'
+  ```
+
+### Safety, Cost, and Architecture Controls
+* **In-process Sliding-Window Rate Limiting:** Configurable via `AI_RATE_LIMIT_PER_MIN` (default 10 requests/min/user), returning HTTP 429 with `Retry-After`.
+* **Interpretation Caching:** 10-minute in-memory TTL cache (max 256 entries) for discovery prompts to avoid redundant API calls. Never caches across user profiles.
+* **Strict Privacy:** User prompts and API keys are never logged at INFO level. API keys are redacted from all error messages and responses.
+* **Free-Tier Data Note:** When using Google AI Studio free tier keys, Google may use prompt inputs to improve its products; avoid submitting personal data.
+* **Catalogue Boundaries:** MovieLens 1M titles span 1919–2000. Post-2000 reference films (e.g. *Interstellar (2014)*) are truthfully reported as `unresolved_references` rather than hallucinatory matches.
+* **Model Knowledge Toggle:** By default, `ASK_ALLOW_MODEL_KNOWLEDGE=False` enforces strict catalogue grounding. Setting it to `True` permits general knowledge plot synopses explicitly labelled as unverified.
+
 
 ---
 
 ## Running Automated Tests
 
-The test suite contains Unit (`UT`), Integration (`IT`), and System (`ST`) tests in accordance with Stage 2 Report specifications.
-
-### Run via Docker
 ```bash
-docker compose exec app pytest tests/ -vv --cov=app
-```
+# Run all 44 unit, integration, and system tests:
+pytest tests/ -v --cov=app
 
-### Run Locally
-```bash
-pip install -r requirements.txt
-pytest tests/ -vv
-```
+# Run offline evaluation CLI:
+python -m app.services.recommender.evaluate --leak-free --k 5 10 20 --seeds 42 43 44
 
-### Test Coverage Summary:
-- **Unit Tests (`UT-01` to `UT-08`)**: Chronological sort, window padding, vocabulary handling, bcrypt password hashing, expired token rejection, rating schema validation (1-5), Stage 2 toy example arithmetic reproduction, already-rated item masking.
-- **Integration Tests (`IT-01` to `IT-08`)**: User registration and login, duplicate user rejection (400), rating creation with timestamps, in-place rating updates, active-user recommendations, cold-start popularity fallback (200), admin-only endpoint protection (403), atomic model file replacement.
-- **System Tests (`ST-01` to `ST-06`)**: End-to-end user journey, health check, bad login error handling, token expiration redirect, recommendation response latency (< 1s), recommendation consistency.
-
----
-
-## Offline Evaluation & Metrics
-
-The evaluation module implements a leak-free **Chronological Leave-Last-Out** protocol:
-- For every user with $\ge 3$ interactions, the chronologically last rating is held out as the test target.
-- The earlier sequence is fed to the GRU4Rec model and the Popularity Baseline.
-- Precision@K, Recall@K, HitRate@K, and NDCG@K are computed for $K \in \{5, 10, 20\}$.
-
-### Run Evaluation
-```bash
-docker compose exec app python -m app.services.recommender.evaluate
-```
-Output results are written to:
-- `evaluation_output/evaluation_results.json`
-- `evaluation_output/evaluation_results.csv`
-
----
-
-## Project Structure
-
-```
-full-stack-recommendation-system-main/
-├── app/
-│   ├── main.py                       # FastAPI application & CORS setup
-│   ├── security.py                   # Password hashing (bcrypt) & JWT helpers
-│   ├── core/
-│   │   └── config.py                 # Application settings & environment variables
-│   ├── db/
-│   │   ├── base_class.py             # SQLAlchemy Declarative Base
-│   │   ├── models.py                 # ORM models (User, Movie, Rating) with is_admin
-│   │   ├── session.py                # Async database engine & session creation
-│   │   └── crud.py                   # CRUD operations (User, Movie, Rating, Popularity)
-│   ├── schemas/                      # Pydantic v2 validation models
-│   │   ├── user.py                   # User schemas with is_admin
-│   │   ├── movie.py                  # Movie schemas
-│   │   ├── rating.py                 # Rating schemas with ge=1, le=5 validation
-│   │   └── token.py                  # JWT token schemas
-│   ├── api/
-│   │   ├── deps.py                   # Auth dependencies & get_current_admin_user
-│   │   └── v1/
-│   │       ├── api.py                # API router aggregation
-│   │       └── endpoints/
-│   │           ├── users.py          # Registration, login, /users/me
-│   │           ├── movies.py         # Catalogue browse, search, POST/DELETE (Admin)
-│   │           ├── ratings.py        # Rating submission & update in place
-│   │           ├── recommendations.py# User recommendations & fallback routing
-│   │           └── admin.py          # Model retraining & Celery trigger endpoints
-│   ├── services/recommender/
-│   │   ├── model.py                  # GRU4Rec SequentialRetrievalModel definition
-│   │   ├── preprocessing.py          # Sequence building, padding, prediction context
-│   │   ├── train.py                  # Atomic model training script
-│   │   ├── predict.py                # Inference & cold-start fallback handler
-│   │   └── evaluate.py               # Leave-last-out evaluation pipeline
-│   └── worker/
-│       ├── celery_app.py             # Celery instance & beat schedule
-│       └── tasks.py                  # Celery retraining & test tasks
-├── recommendation-frontend/          # React + Vite frontend application
-│   ├── src/
-│   │   ├── contexts/                 # AuthContext (real is_admin) & AppContext
-│   │   ├── services/ApiService.js    # Centralized HTTP client
-│   │   ├── pages/                    # HomePage, MovieDetailPage, RecommendationsPage
-│   │   └── components/               # AdminPage, MovieCard, RatingModal, StarRatingInput
-│   └── package.json
-├── tests/                            # Automated test suite
-│   ├── conftest.py                   # Pytest fixtures & async SQLite setup
-│   ├── test_unit.py                  # UT-01 to UT-08
-│   ├── test_integration.py           # IT-01 to IT-08
-│   └── test_system.py                # ST-01 to ST-06
-├── scripts/
-│   └── seed_db.py                    # MovieLens-1M dataset download and DB seeding
-├── models_store/                     # Trained model storage (gru4rec_model.keras)
-├── Dockerfile                        # Backend image definition (python:3.10-slim)
-├── docker-compose.yml                # Multi-container service definitions
-├── Makefile                          # Helper build, format, test targets
-├── requirements.txt                  # Python dependencies
-└── README.md                         # Documentation
+# Run diversity evaluation:
+python scripts/evaluate_diversity.py
 ```
 
 ---
 
-## API Endpoints Summary
+## Documentation Index
 
-| Method | Path | Description | Access |
-|---|---|---|---|
-| `POST` | `/api/v1/users/register` | Register new account | Public |
-| `POST` | `/api/v1/users/login/token` | Login to receive JWT token | Public |
-| `GET` | `/api/v1/users/me` | Fetch current user profile & `is_admin` | Authenticated |
-| `GET` | `/api/v1/movies/` | Browse & search movie catalogue | Public |
-| `GET` | `/api/v1/movies/{id}` | Get movie detail by ID | Public |
-| `POST` | `/api/v1/movies/` | Create a new movie | **Admin only** |
-| `DELETE` | `/api/v1/movies/{id}` | Delete a movie | **Admin only** |
-| `POST` | `/api/v1/ratings/` | Submit/update movie rating (1.0-5.0) | Authenticated |
-| `GET` | `/api/v1/ratings/user/me` | Get current user's rating history | Authenticated |
-| `GET` | `/api/v1/ratings/user/{id}` | Get specific user's ratings | Self or Admin |
-| `GET` | `/api/v1/recommendations/user/me` | Get personalized / fallback recommendations | Authenticated |
-| `GET` | `/api/v1/recommendations/user/{id}` | Get recommendations for user | Self or Admin |
-| `POST` | `/api/v1/admin/trigger-retrain-model` | Trigger background model retraining | **Admin only** |
-| `GET` | `/health` | Service health status | Public |
-
----
-
-## SDG Alignment
-
-- **SDG 9: Industry, Innovation, and Infrastructure**:
-  - Implements research-level sequential machine learning (GRU4Rec) within a production-ready, modular architecture.
-  - Promotes lightweight, reproducible, containerized open-source ML infrastructure.
-- **Data Minimization & Responsible AI**:
-  - Stores only necessary interaction sequences without tracking sensitive personal information.
-  - Transparently flags cold-start discoveries vs. personalized recommendations.
+- [**FINAL_SYSTEM_MAP.md**](file:///Users/vrinda/Desktop/full-stack-recommendation-system-main/FINAL_SYSTEM_MAP.md): Full architectural diagrams, database tables, API routes, and file mappings.
+- [**FINAL_RUNBOOK.md**](file:///Users/vrinda/Desktop/full-stack-recommendation-system-main/FINAL_RUNBOOK.md): Complete step-by-step operator and setup manual.
+- [**REPORT_FACTS.md**](file:///Users/vrinda/Desktop/full-stack-recommendation-system-main/REPORT_FACTS.md): Authoritative measured facts and experimental tables for the academic report.
 
 ---
 
 ## License & Attribution
 
-Distributed under the **MIT License**. See [`LICENSE.txt`](LICENSE.txt) for details.
-
-This project extends the open-source reference project:
-- Base Repository: [george-mountain/full-stack-recommendation-system](https://github.com/george-mountain/full-stack-recommendation-system)
-- Extended & Evaluated by: **Vrinda Garg, Srushti Dedaniya, Nihaar Kotak** (Shah & Anchor Kutchhi Engineering College).
+- **License:** MIT License.
+- **Academic Attribution:** Developed at Shah & Anchor Kutchhi Engineering College (AY 2026–2027) by *Vrinda Garg, Srushti Dedaniya, and Nihaar Kotak*.
+- **Base Architecture Reference:** `george-mountain/full-stack-recommendation-system` (MIT License).

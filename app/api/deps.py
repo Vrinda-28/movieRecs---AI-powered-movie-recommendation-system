@@ -61,4 +61,3 @@ async def get_current_admin_user(
             detail="The user doesn't have enough privileges",
         )
     return current_user
-

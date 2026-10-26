@@ -13,6 +13,33 @@ router = APIRouter()
 from app.db import models
 
 
+@router.get("/onboarding", response_model=List[MovieInList])
+async def get_onboarding_movies(
+    db: AsyncSession = Depends(deps.get_db),
+    total: int = 16,
+):
+    """
+    Returns a genre-diverse set of popular movies for the onboarding rating screen.
+
+    The backend deliberately picks ONE popular title per genre category so the
+    onboarding grid does not become dominated by a single genre. This diversity
+    is enforced server-side and is testable (see test_it_onboarding_diversity).
+
+    Honest accuracy note: ratings submitted through onboarding are immediately
+    available to the GRU4Rec model at *inference* time (the model reads the user's
+    current rating history on every recommendation request). However, the model's
+    *weights* only incorporate these ratings at the next scheduled retraining cycle.
+    The model does NOT instantly "learn" from onboarding ratings.
+    """
+    if total < 4:
+        total = 4
+    if total > 40:
+        total = 40
+
+    movies = await crud.movie.get_onboarding_movies(db, total=total)
+    return movies
+
+
 @router.post("/", response_model=Movie, status_code=status.HTTP_201_CREATED)
 async def create_movie(
     *,
@@ -55,7 +82,6 @@ async def delete_movie(
         raise HTTPException(status_code=404, detail="Movie not found")
     await crud.movie.remove(db, id=movie_id)
     return {"message": f"Movie {movie_id} deleted successfully", "id": movie_id}
-
 
 
 @router.get("/{movie_id}", response_model=Movie)

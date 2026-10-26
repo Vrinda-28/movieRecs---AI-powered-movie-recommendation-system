@@ -1,44 +1,45 @@
+import React from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useAppContext } from "../../contexts/AppContext";
-import FilmIcon from "../Icons/FilmIcon";
-import UserIcon from "../Icons/UserIcon";
-import LockIcon from "../Icons/LockIcon";
-import HomeIcon from "../Icons/HomeIcon";
-import ThumbsUpIcon from "../Icons/ThumbsUpIcon";
-import SettingsIcon from "../Icons/SettingsIcon";
-import LogOutIcon from "../Icons/LogOutIcon";
-import MenuIcon from "../Icons/MenuIcon";
-import XIcon from "../Icons/XIcon";
+import { Menu, X, User, LogOut, Bookmark, Star, Sparkles, Shield } from "lucide-react";
 
-const APP_NAME = import.meta.env.VITE_APP_NAME || "MovieRecs";
-
-const navLinkBase =
-  "px-3 py-2 sm:px-4 sm:py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center";
-const navLinkHover = "hover:bg-gray-700 hover:text-white";
-const navLinkActive = "bg-indigo-600 text-white";
-
+/**
+ * Editorial Navbar:
+ * - Transparent with dark-to-transparent scrim over hero sections (Home & MovieDetail)
+ * - Solid warm paper (#FAF7F2) with hairline divider elsewhere
+ * - Clean typographic wordmark "MovieRecs"
+ * - Fully accessible mobile navigation with aria-expanded
+ */
 const Navbar = ({ onLogout }) => {
   const { isAuthenticated, isAdmin, currentUser } = useAuth();
   const { currentPage, navigateTo, isMobileMenuOpen, setIsMobileMenuOpen } =
     useAppContext();
 
+  const isHeroPage = currentPage === "home" || currentPage === "movieDetail";
+
   const navItems = [
     {
       name: "Home",
       page: "home",
-      icon: <HomeIcon className="w-5 h-5" />,
+      icon: <Star className="w-4 h-4" />,
       requiresAuth: false,
     },
     {
       name: "Recommendations",
       page: "recommendations",
-      icon: <ThumbsUpIcon className="w-5 h-5" />,
+      icon: <Sparkles className="w-4 h-4" />,
+      requiresAuth: true,
+    },
+    {
+      name: "Watchlist",
+      page: "watchlist",
+      icon: <Bookmark className="w-4 h-4" />,
       requiresAuth: true,
     },
     {
       name: "Admin",
       page: "admin",
-      icon: <SettingsIcon className="w-5 h-5" />,
+      icon: <Shield className="w-4 h-4" />,
       requiresAuth: true,
       requiresAdmin: true,
     },
@@ -46,38 +47,20 @@ const Navbar = ({ onLogout }) => {
 
   const handleNav = (page) => {
     navigateTo(page);
+    setIsMobileMenuOpen(false);
   };
 
-  const NavLink = ({ page, children }) => (
-    <a
-      href="#"
-      onClick={(e) => {
-        e.preventDefault();
-        handleNav(page);
-      }}
-      className={`${navLinkBase} ${currentPage === page ? navLinkActive : "text-gray-300 " + navLinkHover}`}
-    >
-      {children}
-    </a>
-  );
-
-  const MobileNavLink = ({ page, children }) => (
-    <a
-      href="#"
-      onClick={(e) => {
-        e.preventDefault();
-        handleNav(page);
-      }}
-      className={`nav-link text-gray-300 hover:bg-gray-700 w-full max-w-xs justify-center text-lg py-3 px-4 rounded-md flex items-center my-1 ${currentPage === page ? "active bg-indigo-600 text-white" : ""}`}
-    >
-      {children}
-    </a>
-  );
-
   return (
-    <nav className="bg-gray-800 shadow-md sticky top-0 z-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <header
+      className={`sticky top-0 z-50 transition-colors duration-200 ${
+        isHeroPage
+          ? "bg-[#141414]/90 backdrop-blur-md text-[#FAF7F2] border-b border-white/10"
+          : "bg-[#FAF7F2] text-[#141414] border-b border-[#D9D3C7]"
+      }`}
+    >
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
+          {/* Brand Wordmark */}
           <div className="flex items-center">
             <a
               href="#"
@@ -85,123 +68,202 @@ const Navbar = ({ onLogout }) => {
                 e.preventDefault();
                 handleNav("home");
               }}
-              className="flex items-center text-white text-xl font-bold"
+              className="flex items-center group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C8412B]"
+              aria-label="MovieRecs home"
             >
-              <FilmIcon className="w-7 h-7 text-indigo-400" />
-              <span className="ml-2 hidden sm:block">{APP_NAME}</span>
+              <span className="font-['Jost',sans-serif] font-black text-xl sm:text-2xl tracking-[0.12em] uppercase transition-colors group-hover:text-[#C8412B]">
+                MOVIERECS
+              </span>
             </a>
           </div>
 
-          {/* Desktop Menu */}
-          <div className="hidden md:flex items-center space-x-1">
+          {/* Desktop Navigation Links */}
+          <nav className="hidden md:flex items-center space-x-6" aria-label="Main navigation">
             {navItems.map((item) => {
               if (item.requiresAuth && !isAuthenticated) return null;
               if (item.requiresAdmin && !isAdmin) return null;
+              const isActive = currentPage === item.page;
+
               return (
-                <NavLink key={item.page} page={item.page}>
-                  {item.icon}
-                  <span className="ml-1.5">{item.name}</span>
-                </NavLink>
+                <a
+                  key={item.page}
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleNav(item.page);
+                  }}
+                  className={`font-['Jost',sans-serif] text-xs uppercase tracking-widest font-bold transition-all py-1 border-b-2 ${
+                    isActive
+                      ? isHeroPage
+                        ? "border-[#C8412B] text-white"
+                        : "border-[#C8412B] text-[#C8412B]"
+                      : isHeroPage
+                      ? "border-transparent text-white/80 hover:text-white hover:border-white/40"
+                      : "border-transparent text-[#5E5A52] hover:text-[#141414] hover:border-[#141414]"
+                  }`}
+                >
+                  {item.name}
+                </a>
               );
             })}
+          </nav>
+
+          {/* Desktop Auth Controls */}
+          <div className="hidden md:flex items-center space-x-4">
+            {isAuthenticated ? (
+              <div className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={() => handleNav("profile")}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-['Jost',sans-serif] font-bold uppercase tracking-wider border transition-colors cursor-pointer ${
+                    currentPage === "profile"
+                      ? "bg-[#C8412B] text-white border-[#C8412B]"
+                      : isHeroPage
+                      ? "bg-transparent text-white border-white/30 hover:border-white"
+                      : "bg-white text-[#141414] border-[#D9D3C7] hover:border-[#141414]"
+                  }`}
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span className="max-w-[120px] truncate">
+                    {currentUser?.email ? currentUser.email.split("@")[0] : "Profile"}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-['Jost',sans-serif] font-semibold uppercase tracking-wider transition-colors cursor-pointer ${
+                    isHeroPage
+                      ? "text-white/70 hover:text-[#C8412B]"
+                      : "text-[#5E5A52] hover:text-[#C8412B]"
+                  }`}
+                  aria-label="Log out"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => handleNav("login")}
+                  className={`px-3 py-1.5 text-xs font-['Jost',sans-serif] font-bold uppercase tracking-widest transition-colors cursor-pointer ${
+                    isHeroPage
+                      ? "text-white/80 hover:text-white"
+                      : "text-[#141414] hover:text-[#C8412B]"
+                  }`}
+                >
+                  Login
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNav("register")}
+                  className="px-4 py-1.5 bg-[#C8412B] hover:bg-[#A8321F] text-white text-xs font-['Jost',sans-serif] font-bold uppercase tracking-widest transition-colors shadow-sm cursor-pointer"
+                >
+                  Join
+                </button>
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center">
-            {/* Desktop Auth Links */}
-            <div className="hidden md:flex items-center space-x-3">
-              {isAuthenticated ? (
-                <>
-                  <span className="text-gray-300 text-sm">
-                    Hi, {currentUser?.email?.split("@")[0] || "User"}!
-                  </span>
-                  <button
-                    onClick={onLogout}
-                    className={`${navLinkBase} text-gray-300 ${navLinkHover} hover:bg-red-700`}
-                  >
-                    <LogOutIcon className="w-5 h-5" />
-                    <span className="ml-1.5">Logout</span>
-                  </button>
-                </>
+          {/* Mobile Menu Toggle Button */}
+          <div className="md:hidden">
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C8412B]"
+              aria-label="Toggle navigation menu"
+              aria-expanded={isMobileMenuOpen}
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-6 h-6" />
               ) : (
-                <div className="flex space-x-1">
-                  <NavLink page="login">
-                    <UserIcon className="w-5 h-5" />
-                    <span className="ml-1.5">Login</span>
-                  </NavLink>
-                  <NavLink page="register">
-                    <LockIcon className="w-5 h-5" />
-                    <span className="ml-1.5">Register</span>
-                  </NavLink>
-                </div>
+                <Menu className="w-6 h-6" />
               )}
-            </div>
-
-            {/* Mobile Menu Button */}
-            <div className="md:hidden">
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="text-gray-300 hover:text-white focus:outline-none p-2"
-                aria-label="Toggle menu"
-              >
-                {isMobileMenuOpen ? (
-                  <XIcon className="w-6 h-6" />
-                ) : (
-                  <MenuIcon className="w-6 h-6" />
-                )}
-              </button>
-            </div>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Accessible Mobile Drawer */}
       {isMobileMenuOpen && (
-        <div className="mobile-menu md:hidden fixed inset-0 bg-gray-900 bg-opacity-95 z-40 pt-16 flex flex-col items-center">
-          {" "}
-          {/* Apply .mobile-menu styles if needed */}
-          <div className="pt-2 pb-3 space-y-1 px-2 flex flex-col items-center w-full">
-            {navItems.map((item) => {
-              if (item.requiresAuth && !isAuthenticated) return null;
-              if (item.requiresAdmin && !isAdmin) return null;
-              return (
-                <MobileNavLink key={item.page} page={item.page}>
-                  {item.icon}
-                  <span className="ml-2">{item.name}</span>
-                </MobileNavLink>
-              );
-            })}
+        <div className="md:hidden fixed inset-x-0 top-16 bottom-0 bg-[#FAF7F2] text-[#141414] z-50 p-6 flex flex-col justify-between overflow-y-auto border-t border-[#D9D3C7]">
+          <div className="space-y-4">
+            <span className="text-[11px] font-['Jost',sans-serif] font-bold uppercase tracking-widest text-[#5E5A52] block border-b border-[#D9D3C7] pb-2">
+              Menu
+            </span>
+            <div className="flex flex-col space-y-2">
+              {navItems.map((item) => {
+                if (item.requiresAuth && !isAuthenticated) return null;
+                if (item.requiresAdmin && !isAdmin) return null;
+                const isActive = currentPage === item.page;
+
+                return (
+                  <button
+                    key={item.page}
+                    type="button"
+                    onClick={() => handleNav(item.page)}
+                    className={`flex items-center gap-3 p-3 font-['Jost',sans-serif] font-bold text-sm uppercase tracking-wider text-left border ${
+                      isActive
+                        ? "bg-[#C8412B] text-white border-[#C8412B]"
+                        : "bg-white text-[#141414] border-[#D9D3C7] hover:border-[#141414]"
+                    }`}
+                  >
+                    {item.icon}
+                    <span>{item.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Mobile Auth Actions */}
+          <div className="pt-6 border-t border-[#D9D3C7] space-y-3">
             {isAuthenticated ? (
               <>
-                <span className="text-gray-400 text-sm py-3 block">
-                  Logged in as: {currentUser?.email}
-                </span>
                 <button
+                  type="button"
+                  onClick={() => handleNav("profile")}
+                  className="w-full py-3 bg-white border border-[#D9D3C7] text-[#141414] font-['Jost',sans-serif] font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+                >
+                  <User className="w-4 h-4" />
+                  <span>My Profile ({currentUser?.email?.split("@")[0]})</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     onLogout();
                     setIsMobileMenuOpen(false);
                   }}
-                  className="nav-link text-gray-300 hover:bg-red-700 hover:text-white w-full max-w-xs justify-center text-lg py-3 px-4 rounded-md flex items-center my-1"
+                  className="w-full py-3 bg-[#141414] text-white font-['Jost',sans-serif] font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2"
                 >
-                  <LogOutIcon className="w-5 h-5" />{" "}
-                  <span className="ml-2">Logout</span>
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
                 </button>
               </>
             ) : (
-              <>
-                <MobileNavLink page="login">
-                  <UserIcon className="w-5 h-5" />{" "}
-                  <span className="ml-2">Login</span>
-                </MobileNavLink>
-                <MobileNavLink page="register">
-                  <LockIcon className="w-5 h-5" />{" "}
-                  <span className="ml-2">Register</span>
-                </MobileNavLink>
-              </>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleNav("login")}
+                  className="py-3 bg-white border border-[#D9D3C7] text-[#141414] font-['Jost',sans-serif] font-bold text-xs uppercase tracking-wider text-center"
+                >
+                  Login
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNav("register")}
+                  className="py-3 bg-[#C8412B] text-white font-['Jost',sans-serif] font-bold text-xs uppercase tracking-wider text-center"
+                >
+                  Register
+                </button>
+              </div>
             )}
           </div>
         </div>
       )}
-    </nav>
+    </header>
   );
 };
+
 export default Navbar;

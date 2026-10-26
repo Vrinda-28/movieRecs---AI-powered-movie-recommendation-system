@@ -18,9 +18,8 @@ os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "120"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 
 from app.api import deps
-
-from app.db.base_class import Base
 from app.db import crud, models
+from app.db.base_class import Base
 from app.main import app
 
 # Create in-memory async SQLite engine for test isolation
@@ -56,6 +55,7 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 @pytest_asyncio.fixture(scope="function")
 async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """Provides an AsyncClient connected to the FastAPI app with the test DB session."""
+
     async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
         yield db_session
 

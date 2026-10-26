@@ -1,0 +1,32 @@
+{
+  "num_users_evaluated": 1000,
+  "catalogue_size": 3952,
+  "k": 10,
+  "popularity_baseline": {
+    "unique_recommended_count": 132,
+    "catalogue_coverage": 0.0334,
+    "popularity_concentration_top10": 1.0,
+    "gini_index": 0.9934,
+    "shannon_entropy": 5.11,
+    "average_intra_list_diversity": 0.7555,
+    "hit_rate_at_10": 0.037
+  },
+  "gru4rec_standard": {
+    "unique_recommended_count": 2110,
+    "catalogue_coverage": 0.5339,
+    "popularity_concentration_top10": 0.1298,
+    "gini_index": 0.7154,
+    "shannon_entropy": 10.4871,
+    "average_intra_list_diversity": 0.5907,
+    "hit_rate_at_10": 0.142
+  },
+  "gru4rec_mmr_reranked": {
+    "unique_recommended_count": 2107,
+    "catalogue_coverage": 0.5331,
+    "popularity_concentration_top10": 0.132,
+    "gini_index": 0.7151,
+    "shannon_entropy": 10.488,
+    "average_intra_list_diversity": 0.596,
+    "hit_rate_at_10": 0.143
+  }
+}

@@ -1,3 +1,4 @@
+import time
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -20,6 +21,7 @@ async def create_rating(
     """
     Create a new rating for a movie by the current user.
     If the user has already rated this movie, the rating and timestamp are updated in place.
+    Logs RATE interaction event.
     """
     movie = await crud.movie.get(db, id=rating_in.movie_id)
     if not movie:
@@ -27,6 +29,14 @@ async def create_rating(
             status_code=404,
             detail=f"Movie with ID {rating_in.movie_id} not found. Cannot add rating.",
         )
+
+    # Use client timestamp if valid historical timestamp, else server time
+    effective_ts = (
+        rating_in.timestamp
+        if (rating_in.timestamp and rating_in.timestamp > 0)
+        else int(time.time())
+    )
+    rating_in.timestamp = effective_ts
 
     existing_rating = await crud.rating.get_by_user_and_movie(
         db, user_id=current_user.id, movie_id=rating_in.movie_id
@@ -37,14 +47,28 @@ async def create_rating(
             db_obj=existing_rating,
             obj_in={
                 "rating": rating_in.rating,
-                "timestamp": rating_in.timestamp,
+                "timestamp": effective_ts,
             },
+        )
+        await crud.interaction.log_interaction(
+            db,
+            user_id=current_user.id,
+            movie_id=rating_in.movie_id,
+            event_type="RATE",
         )
         return updated_rating
 
     rating = await crud.rating.create_with_owner(
         db=db, obj_in=rating_in, user_id=current_user.id
     )
+
+    await crud.interaction.log_interaction(
+        db,
+        user_id=current_user.id,
+        movie_id=rating_in.movie_id,
+        event_type="RATE",
+    )
+
     return rating
 
 
@@ -88,4 +112,3 @@ async def read_user_ratings(
         db, user_id=user_id, skip=skip, limit=limit
     )
     return ratings
-

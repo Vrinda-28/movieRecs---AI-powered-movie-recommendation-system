@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import keras
 import keras_rs
@@ -15,24 +16,35 @@ class SequentialRetrievalModel(keras.Model):
     Args:
       movies_count: Total number of unique movies in the dataset.
       embedding_dimension: Output dimension for movie embedding tables.
+      gru_units: Hidden dimensionality for the GRU cell (defaults to embedding_dimension).
+      mask_zero: Whether to mask zero-padded sequence elements in the embedding layer.
+      k: Top-K candidates retrieved by BruteForceRetrieval.
     """
 
     def __init__(
         self,
         movies_count: int,
         embedding_dimension: int = settings.EMBEDDING_DIM,
+        gru_units: Optional[int] = None,
+        mask_zero: bool = settings.MASK_ZERO,
         k: int = settings.RETRIEVAL_K,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.movies_count = movies_count
         self.embedding_dimension = embedding_dimension
+        self.gru_units = gru_units if gru_units is not None else embedding_dimension
+        self.mask_zero = mask_zero
         self.k = k
 
         self.query_model = keras.Sequential(
             [
-                keras.layers.Embedding(self.movies_count + 1, self.embedding_dimension),
-                keras.layers.GRU(self.embedding_dimension),
+                keras.layers.Embedding(
+                    self.movies_count + 1,
+                    self.embedding_dimension,
+                    mask_zero=self.mask_zero,
+                ),
+                keras.layers.GRU(self.gru_units),
             ]
         )
 
@@ -42,12 +54,13 @@ class SequentialRetrievalModel(keras.Model):
 
         # Retrieval size is sized to max requested count (e.g. 50)
         # Slicing down to user's count happens during prediction after filtering watched movies
-        self.retrieval = keras_rs.layers.BruteForceRetrieval(k=self.k, return_scores=False)
+        self.retrieval = keras_rs.layers.BruteForceRetrieval(
+            k=self.k, return_scores=False
+        )
 
         self.loss_fn = keras.losses.CategoricalCrossentropy(
             from_logits=True,
         )
-
 
     def build(self, input_shape):
         # Build query and candidate models first
@@ -125,11 +138,12 @@ class SequentialRetrievalModel(keras.Model):
             {
                 "movies_count": self.movies_count,
                 "embedding_dimension": self.embedding_dimension,
+                "gru_units": self.gru_units,
+                "mask_zero": self.mask_zero,
                 "k": self.k,
             }
         )
         return config
-
 
     @classmethod
     def from_config(cls, config):

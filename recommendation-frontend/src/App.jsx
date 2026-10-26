@@ -10,6 +10,9 @@ import HomePage from "./pages/HomePage";
 import RecommendationsPage from "./pages/RecommendationsPage";
 import AdminPage from "./components/Admin/AdminPage";
 import MovieDetailPage from "./pages/MovieDetailPage";
+import WatchlistPage from "./pages/WatchlistPage";
+import ProfilePage from "./pages/ProfilePage";
+import OnboardingPage from "./pages/OnboardingPage";
 import MessageBox from "./components/Common/MessageBox";
 import LoadingSpinner from "./components/Common/LoadingSpinner";
 
@@ -25,20 +28,41 @@ const App = () => {
 
   // Login/Register handlers
   const handleLoginSubmit = async (credentials) => {
-    const tokenData = await ApiService.loginUser(credentials);
-    const userData = await ApiService.getCurrentUser(tokenData.access_token);
-    login(tokenData.access_token, userData);
-    navigateTo("home");
-    showGlobalMessage("Login successful!", "success");
+    try {
+      const tokenData = await ApiService.loginUser(credentials);
+      const userData = await ApiService.getCurrentUser(tokenData.access_token);
+      login(tokenData.access_token, userData);
+      
+      // Check if user has any ratings; if not, prompt onboarding
+      try {
+        const myRatings = await ApiService.getMyRatings(tokenData.access_token);
+        if (!myRatings || myRatings.length === 0) {
+          navigateTo("onboarding");
+          showGlobalMessage("Welcome! Rate a few movies to personalize your recommendations.", "info");
+          return;
+        }
+      } catch {
+        // ignore check failure, go home
+      }
+
+      navigateTo("home");
+      showGlobalMessage("Login successful! Welcome back.", "success");
+    } catch (err) {
+      showGlobalMessage(err.message || "Failed to log in", "error");
+    }
   };
 
   const handleRegisterSubmit = async (credentials) => {
-    await ApiService.registerUser({
-      email: credentials.username,
-      password: credentials.password,
-    });
-    navigateTo("login");
-    showGlobalMessage("Registration successful! Please log in.", "success");
+    try {
+      await ApiService.registerUser({
+        email: credentials.username,
+        password: credentials.password,
+      });
+      navigateTo("login");
+      showGlobalMessage("Registration successful! Please log in.", "success");
+    } catch (err) {
+      showGlobalMessage(err.message || "Failed to register", "error");
+    }
   };
 
   const handleLogout = () => {
@@ -54,20 +78,14 @@ const App = () => {
       const isAdminPage = currentPage === "admin";
 
       if (isRecommendationsPage && !isAuthenticated) {
-        showGlobalMessage("Please log in to see recommendations.", "error");
+        showGlobalMessage("Please log in to view recommendations.", "error");
         navigateTo("login");
       } else if (isAdminPage) {
         if (!isAuthenticated) {
-          showGlobalMessage(
-            "Please log in to access the admin panel.",
-            "error",
-          );
+          showGlobalMessage("Please log in to access the admin panel.", "error");
           navigateTo("login");
         } else if (!isAdmin) {
-          showGlobalMessage(
-            "You do not have permission to access the admin page.",
-            "error",
-          );
+          showGlobalMessage("You do not have permission to access the admin page.", "error");
           navigateTo("home");
         }
       }
@@ -83,8 +101,8 @@ const App = () => {
 
   if (loadingUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <LoadingSpinner text="Initializing application..." />
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2] text-[#141414]">
+        <LoadingSpinner text="Loading MovieRecs..." />
       </div>
     );
   }
@@ -104,7 +122,6 @@ const App = () => {
       );
       break;
     case "recommendations":
-      // Render only if authenticated, otherwise App's useEffect will redirect
       pageComponent = isAuthenticated ? (
         <RecommendationsPage />
       ) : (
@@ -112,7 +129,6 @@ const App = () => {
       );
       break;
     case "admin":
-      // Render only if authenticated and admin, otherwise App's useEffect will redirect
       pageComponent =
         isAuthenticated && isAdmin ? (
           <AdminPage />
@@ -121,26 +137,34 @@ const App = () => {
         );
       break;
     case "movieDetail":
-      pageComponent = selectedMovieId ? <MovieDetailPage /> : <HomePage />; // Fallback to home if no ID
+      pageComponent = selectedMovieId ? <MovieDetailPage /> : <HomePage />;
+      break;
+    case "watchlist":
+      pageComponent = <WatchlistPage />;
+      break;
+    case "profile":
+      pageComponent = <ProfilePage />;
+      break;
+    case "onboarding":
+      pageComponent = <OnboardingPage />;
       break;
     default:
       pageComponent = <HomePage />;
   }
 
   return (
-    <>
+    <div className="min-h-screen flex flex-col bg-[#FAF7F2] text-[#141414] overflow-x-hidden">
       <MessageBox
         message={globalMessage.text}
         type={globalMessage.type}
         onDismiss={() => showGlobalMessage("", "")}
       />
       <Navbar onLogout={handleLogout} />
-      <main className="pb-10 pt-4 md:pt-6 min-h-[calc(100vh-8rem)] bg-gray-900 px-2 sm:px-4">
-        {" "}
+      <main className="flex-grow w-full">
         {pageComponent}
       </main>
       <Footer />
-    </>
+    </div>
   );
 };
 

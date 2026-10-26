@@ -11,8 +11,7 @@ const DisplayAverageRating = ({
     isNaN(averageRating) ||
     numRatings <= 0
   ) {
-    if (numRatings > 0 && averageRating === 0) {
-    } else {
+    if (!(numRatings > 0 && averageRating === 0)) {
       return (
         <p className={`text-xs sm:text-sm text-gray-500 ${className}`}>
           No ratings yet

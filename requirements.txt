@@ -23,5 +23,4 @@ httpx
 aiosqlite
 black
 isort
-
-
+groq==1.7.0

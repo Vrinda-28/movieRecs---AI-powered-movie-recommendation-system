@@ -1,0 +1,5 @@
+Experiment,Users,Ratings,Batch,Epochs,lr,Mask,Pad,TrainTime(s),FinalLoss,Latency(ms),GRU_Hit@5,GRU_Hit@10,GRU_NDCG@10,GRU_Coverage,Pop_Hit@5,Pop_Hit@10,Pop_NDCG@10,Pop_Coverage
+Exp 1: Shipped Config (Small Demo Data: 200 Users),200,11002,4096,5,0.005,False,right,0.91,8.1019,0.06,0.025,0.0317,0.0199,0.0234,0.01,0.015,0.0098,0.0111
+Exp 2: Shipped Config (Larger Data: 1000 Users),1000,163907,4096,5,0.005,False,right,10.92,7.1006,0.02,0.0833,0.1333,0.0667,0.5463,0.02,0.037,0.0188,0.0504
+"Exp 3: Tuned Config (Batch=256, Epochs=15, lr=0.001, Masked)",1000,163907,256,15,0.001,True,right,46.91,3.8638,0.02,0.085,0.1343,0.0682,0.7655,0.02,0.037,0.0188,0.0504
+"Exp 4: Left-Padding & Masked (Batch=256, Epochs=15, lr=0.001)",1000,163907,256,15,0.001,True,left,44.9,3.8638,0.02,0.0833,0.134,0.0687,0.7668,0.02,0.037,0.0188,0.0504

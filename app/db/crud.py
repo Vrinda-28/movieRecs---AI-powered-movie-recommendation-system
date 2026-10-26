@@ -11,9 +11,10 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import and_
 
 from app.db.base_class import Base
-from app.db.models import Movie, Rating, User
+from app.db.models import Interaction, Movie, Rating, Review, User, Watchlist
 from app.schemas.movie import MovieCreate, MovieUpdate
 from app.schemas.rating import RatingCreate, RatingUpdate
+from app.schemas.review import ReviewCreate, ReviewUpdate
 from app.schemas.user import UserCreate
 from app.security import get_password_hash
 
@@ -257,6 +258,105 @@ class CRUDMovie(CRUDBase[Movie, MovieCreate, MovieUpdate]):
 
         return movies_with_aggregates
 
+    async def get_onboarding_movies(
+        self,
+        db: AsyncSession,
+        *,
+        total: int = 16,
+        genres_per_slot: int = 1,
+        target_genres: Optional[List[str]] = None,
+    ) -> List[Movie]:
+        """
+        Return a genre-diverse set of popular movies for the onboarding screen.
+
+        Algorithm:
+        1. Fetch the top-rated movie for each of the target_genres independently.
+        2. De-duplicate by movie id (a title can only appear once).
+        3. If fewer than `total` unique movies found, backfill with overall popular
+           movies not already in the set.
+
+        This ensures the onboarding grid covers many genres instead of being
+        dominated by a single popular genre.
+
+        Test diversity invariant: the returned list must contain movies from at
+        least min(len(target_genres), total // 2) distinct genre strings.
+        """
+        if target_genres is None:
+            target_genres = [
+                "Action",
+                "Adventure",
+                "Animation",
+                "Comedy",
+                "Crime",
+                "Drama",
+                "Fantasy",
+                "Horror",
+                "Musical",
+                "Mystery",
+                "Romance",
+                "Sci-Fi",
+                "Thriller",
+                "War",
+                "Western",
+                "Film-Noir",
+            ]
+
+        rating_subq = (
+            select(
+                Rating.movie_id,
+                func.coalesce(cast(func.avg(Rating.rating), SQLFloat), 0.0).label(
+                    "average_rating"
+                ),
+                func.count(Rating.id).label("num_ratings"),
+            )
+            .group_by(Rating.movie_id)
+            .subquery("rating_sub_onboard")
+        )
+
+        seen_ids: set = set()
+        result_movies: List[Movie] = []
+
+        # Pick one popular movie per genre slot
+        for genre in target_genres:
+            if len(result_movies) >= total:
+                break
+            stmt = (
+                select(
+                    self.model, rating_subq.c.average_rating, rating_subq.c.num_ratings
+                )
+                .outerjoin(rating_subq, self.model.id == rating_subq.c.movie_id)
+                .filter(self.model.genres.ilike(f"%{genre}%"))
+                .order_by(
+                    desc(func.coalesce(rating_subq.c.num_ratings, 0)),
+                    desc(func.coalesce(rating_subq.c.average_rating, 0.0)),
+                    self.model.id,
+                )
+                .limit(3)  # fetch 3 candidates to allow de-dup fallback
+            )
+            rows = (await db.execute(stmt)).all()
+            for movie_orm, avg_r, num_r in rows:
+                if movie_orm.id not in seen_ids:
+                    movie_orm.average_rating = avg_r or 0.0
+                    movie_orm.num_ratings = num_r or 0
+                    result_movies.append(movie_orm)
+                    seen_ids.add(movie_orm.id)
+                    break  # one per genre slot
+
+        # Backfill if we still need more movies
+        if len(result_movies) < total:
+            needed = total - len(result_movies)
+            backfill = await self.get_most_popular(
+                db, limit=needed + len(seen_ids), exclude_movie_ids=list(seen_ids)
+            )
+            for m in backfill:
+                if len(result_movies) >= total:
+                    break
+                if m.id not in seen_ids:
+                    result_movies.append(m)
+                    seen_ids.add(m.id)
+
+        return result_movies
+
 
 class CRUDRating(CRUDBase[Rating, RatingCreate, RatingUpdate]):
     async def create_with_owner(
@@ -298,7 +398,125 @@ class CRUDRating(CRUDBase[Rating, RatingCreate, RatingUpdate]):
         return result.scalars().all()
 
 
+class CRUDReview(CRUDBase[Review, ReviewCreate, ReviewUpdate]):
+    async def create_with_owner(
+        self, db: AsyncSession, *, obj_in: ReviewCreate, user_id: int
+    ) -> Review:
+        db_obj = Review(
+            user_id=user_id,
+            movie_id=obj_in.movie_id,
+            text=obj_in.text.strip(),
+        )
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
+
+    async def get_by_user_and_movie(
+        self, db: AsyncSession, *, user_id: int, movie_id: int
+    ) -> Optional[Review]:
+        stmt = select(self.model).filter(
+            and_(self.model.user_id == user_id, self.model.movie_id == movie_id)
+        )
+        result = await db.execute(stmt)
+        return result.scalars().first()
+
+    async def get_multi_by_movie(
+        self, db: AsyncSession, *, movie_id: int, skip: int = 0, limit: int = 50
+    ) -> List[Review]:
+        stmt = (
+            select(self.model)
+            .filter(self.model.movie_id == movie_id)
+            .options(selectinload(self.model.user))
+            .order_by(desc(self.model.created_at))
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        return result.scalars().all()
+
+
+class CRUDWatchlist(CRUDBase[Watchlist, Any, Any]):
+    async def add_to_watchlist(
+        self, db: AsyncSession, *, user_id: int, movie_id: int
+    ) -> Watchlist:
+        existing = await self.get_by_user_and_movie(
+            db, user_id=user_id, movie_id=movie_id
+        )
+        if existing:
+            return existing
+        db_obj = Watchlist(user_id=user_id, movie_id=movie_id)
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
+
+    async def remove_from_watchlist(
+        self, db: AsyncSession, *, user_id: int, movie_id: int
+    ) -> bool:
+        stmt = sqlalchemy_delete(self.model).filter(
+            and_(self.model.user_id == user_id, self.model.movie_id == movie_id)
+        )
+        result = await db.execute(stmt)
+        await db.commit()
+        return result.rowcount > 0
+
+    async def get_by_user_and_movie(
+        self, db: AsyncSession, *, user_id: int, movie_id: int
+    ) -> Optional[Watchlist]:
+        stmt = select(self.model).filter(
+            and_(self.model.user_id == user_id, self.model.movie_id == movie_id)
+        )
+        result = await db.execute(stmt)
+        return result.scalars().first()
+
+    async def get_user_watchlist(
+        self, db: AsyncSession, *, user_id: int, skip: int = 0, limit: int = 50
+    ) -> List[Watchlist]:
+        stmt = (
+            select(self.model)
+            .filter(self.model.user_id == user_id)
+            .options(selectinload(self.model.movie))
+            .order_by(desc(self.model.created_at))
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        return result.scalars().all()
+
+
+class CRUDInteraction(CRUDBase[Interaction, Any, Any]):
+    async def log_interaction(
+        self, db: AsyncSession, *, user_id: int, movie_id: int, event_type: str
+    ) -> Optional[Interaction]:
+        db_obj = Interaction(
+            user_id=user_id,
+            movie_id=movie_id,
+            event_type=event_type,
+        )
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
+
+    async def get_user_interactions(
+        self, db: AsyncSession, *, user_id: int, skip: int = 0, limit: int = 50
+    ) -> List[Interaction]:
+        stmt = (
+            select(self.model)
+            .filter(self.model.user_id == user_id)
+            .options(selectinload(self.model.movie))
+            .order_by(desc(self.model.created_at))
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await db.execute(stmt)
+        return result.scalars().all()
+
+
 user = CRUDUser(User)
 movie = CRUDMovie(Movie)
 rating = CRUDRating(Rating)
-
+review = CRUDReview(Review)
+watchlist = CRUDWatchlist(Watchlist)
+interaction = CRUDInteraction(Interaction)

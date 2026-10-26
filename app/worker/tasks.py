@@ -1,31 +1,50 @@
 import asyncio
 import logging
+from datetime import datetime, timezone
 
 from app.db.session import AsyncSessionLocal
-from app.services.recommender.train import train_model
+from app.services.recommender.train import set_training_status, train_model
 from app.worker.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(name="app.worker.tasks.train_recommendation_model_task")
-def train_recommendation_model_task():
+@celery_app.task(name="app.worker.tasks.train_recommendation_model_task", bind=True)
+def train_recommendation_model_task(self):
     """
     Celery task to trigger the recommendation model training.
     This task is synchronous from Celery's perspective, but it runs an async function.
     """
-    logger.info("Received task: train_recommendation_model_task")
+    task_id = (
+        self.request.id if hasattr(self, "request") and self.request.id else "manual"
+    )
+    start_iso = datetime.now(timezone.utc).isoformat()
+    logger.info(f"Received task: train_recommendation_model_task (task_id={task_id})")
+    set_training_status(status="running", task_id=task_id, start_time=start_iso)
 
     async def _run_training():
         async with AsyncSessionLocal() as db:
             try:
-                await train_model(db)
+                sidecar = await train_model(db)
+                finish_iso = datetime.now(timezone.utc).isoformat()
+                set_training_status(
+                    status="successful",
+                    task_id=task_id,
+                    finish_time=finish_iso,
+                    metadata=sidecar,
+                )
                 logger.info("train_recommendation_model_task completed successfully.")
             except Exception as e:
+                finish_iso = datetime.now(timezone.utc).isoformat()
+                set_training_status(
+                    status="failed",
+                    task_id=task_id,
+                    finish_time=finish_iso,
+                    error_text=str(e),
+                )
                 logger.error(
                     f"Error during train_recommendation_model_task: {e}", exc_info=True
                 )
-
                 raise
 
     # Run the async function within the synchronous Celery task
